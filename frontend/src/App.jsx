@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowDown, ArrowUpRight, Check, Copy, ExternalLink,
   KeyRound, Link2, LockKeyhole, ShieldCheck, Sparkles, X,
-  Zap, BarChart3, Globe, Layers, MousePointerClick, QrCode,
-  ChevronRight, Star, Plus, Minus
+
 } from "lucide-react"
 import { IntroAnimation, HERO_REVEAL_MS } from "./components/intro-animation"
 import { MobileNav } from "./components/mobile-nav"
@@ -165,6 +164,25 @@ export default function LinkPulsePage() {
   const [copied, setCopied] = useState(null)
   const [createdModal, setCreatedModal] = useState(null)
   const [generating, setGenerating] = useState(false)
+  const [theme, setTheme] = useState(() => {
+    // Persist preference across reloads
+    return localStorage.getItem("lp_theme") || "dark"
+  })
+
+  // Apply theme to <html> so CSS variables work globally (body, fixed elements, etc.)
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme)
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => {
+      const next = t === "dark" ? "light" : "dark"
+      localStorage.setItem("lp_theme", next)
+      return next
+    })
+  }, [])
+
+  const isDark = theme === "dark"
 
   const linkPulseRef = useRef(null)
   const tableRef = useRef(null)
@@ -311,15 +329,15 @@ export default function LinkPulsePage() {
   /* ── Redirect Loader ── */
   if (redirecting) {
     return (
-      <main className="min-h-screen bg-[#050507] flex flex-col items-center justify-center p-6">
+      <main className="min-h-screen flex flex-col items-center justify-center p-6">
         <AnimatedBackground />
         <div className="relative z-10 flex flex-col items-center gap-6">
           <div className="redirect-logo">
             <span>LP</span>
           </div>
-          <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-3 backdrop-blur-xl">
+          <div className="flex items-center gap-3 rounded-full px-6 py-3 backdrop-blur-xl" style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
             <Sparkles className="size-4 animate-spin text-violet-400" />
-            <span className="text-sm font-medium text-white/80">Routing via GhostClick™ Bot Shield...</span>
+            <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Routing via GhostClick™ Bot Shield...</span>
           </div>
         </div>
       </main>
@@ -327,14 +345,7 @@ export default function LinkPulsePage() {
   }
 
   return (
-    <main data-theme={theme} className="min-h-screen bg-[#050507] text-white font-sans antialiased overflow-x-hidden">
-      <AnimatedBackground />
-      <IntroAnimation onDone={handleIntroDone} />
-      <MobileNav
-        onGetStarted={scrollToShortener}
-        theme={theme}
-        onToggleTheme={() => setTheme(currentTheme => currentTheme === "dark" ? "light" : "dark")}
-      />
+
 
       {/* ─── HERO ──────────────────────────────────────────────────────────── */}
       <section
@@ -355,6 +366,7 @@ export default function LinkPulsePage() {
           className="hero-bottom-overlay absolute inset-x-0 bottom-0 h-[70%]"
           aria-hidden="true"
         />
+
 
         {/* Floating pills */}
         <FloatingPill text="go.lp/launch-2025" delay={0} x={76} y={18} />
@@ -505,8 +517,8 @@ export default function LinkPulsePage() {
               <div className="mt-4 text-3xl font-light tracking-tight tabular-nums">
                 <AnimatedCounter value={totalClicks} />
               </div>
-              <div className="mt-1 text-xs text-white/30 uppercase tracking-widest">Verified Clicks</div>
-              <div className="mt-2 text-[11px] text-white/20">Live tracked on your links</div>
+              <div className="mt-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Verified Clicks</div>
+              <div className="mt-2 text-[11px]" style={{ color: "var(--text-faint)" }}>Live tracked on your links</div>
             </GlassCard>
 
             <GlassCard className="p-6 stats-card">
@@ -516,8 +528,8 @@ export default function LinkPulsePage() {
               <div className="mt-4 text-3xl font-light tracking-tight tabular-nums">
                 <AnimatedCounter value={activeLinksCount} />
               </div>
-              <div className="mt-1 text-xs text-white/30 uppercase tracking-widest">Active Links</div>
-              <div className="mt-2 text-[11px] text-white/20">Personal workspace</div>
+              <div className="mt-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Active Links</div>
+              <div className="mt-2 text-[11px]" style={{ color: "var(--text-faint)" }}>Personal workspace</div>
             </GlassCard>
 
             <GlassCard className="p-6 stats-card">
@@ -527,7 +539,7 @@ export default function LinkPulsePage() {
               <div className="mt-4 text-3xl font-light tracking-tight text-emerald-400">
                 Active
               </div>
-              <div className="mt-1 text-xs text-white/30 uppercase tracking-widest">Shield Status</div>
+              <div className="mt-1 text-xs uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Shield Status</div>
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-400/60">
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 GhostClick™ engine running
@@ -538,10 +550,10 @@ export default function LinkPulsePage() {
           {/* Links table */}
           <div ref={tableRef}>
             <GlassCard className="mt-4 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-5 md:px-8">
+              <div className="flex items-center justify-between px-6 py-5 md:px-8" style={{ borderBottom: "1px solid var(--border)" }}>
                 <div>
-                  <h3 className="text-base font-medium text-white/90">Recently shortened links</h3>
-                  <p className="mt-1 text-xs text-white/30">Your private workspace activity, live from Supabase.</p>
+                  <h3 className="text-base font-medium" style={{ color: "var(--text-primary)" }}>Recently shortened links</h3>
+                  <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>Your private workspace activity, live from Supabase.</p>
                 </div>
                 <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1">
                   <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -550,7 +562,7 @@ export default function LinkPulsePage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="border-b border-white/[0.05] text-[10px] uppercase tracking-[0.16em] text-white/25">
+                  <thead className="text-[10px] uppercase tracking-[0.16em]" style={{ borderBottom: "1px solid var(--border)", color: "var(--thead-text)" }}>
                     <tr>
                       <th className="px-6 py-4 font-normal md:px-8">Short Link</th>
                       <th className="px-4 py-4 font-normal">Original URL</th>
@@ -561,7 +573,7 @@ export default function LinkPulsePage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="4" className="px-6 py-10 text-center text-xs text-white/25">
+                        <td colSpan="4" className="px-6 py-10 text-center text-xs" style={{ color: "var(--text-muted)" }}>
                           <div className="flex items-center justify-center gap-2">
                             <span className="size-4 rounded-full border-2 border-violet-500/40 border-t-violet-500 animate-spin" />
                             Connecting to database...
