@@ -1,14 +1,9 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- No-flash theme init: runs before CSS/React, prevents white/dark flicker -->
+    <!-- Start in dark mode before CSS/React to prevent a theme flash. -->
     <script>
-      (function() {
-        try {
-          var t = localStorage.getItem('lp_theme') || localStorage.getItem('linkpulse_theme') || 'dark';
-          document.documentElement.setAttribute('data-theme', t);
-        } catch(e) {}
-      })();
+      document.documentElement.setAttribute('data-theme', 'dark');
     </script>
     <meta charset="UTF-8" />
     <script>

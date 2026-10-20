@@ -3,11 +3,10 @@
 // Custom hooks ka naam "use" se shuru hota hai — ye React ka rule hai.
 //
 // Ye hook kya karta hai:
-//   1. Browser ya localStorage se initial theme decide karta hai
+//   1. Har page load par dark theme se start karta hai
 //   2. Theme change hone pe <html> element ka data-theme attribute update karta hai
 //      (taaki CSS variables globally kaam karein)
-//   3. Theme localStorage mein save karta hai (page reload ke baad bhi yaad rahe)
-//   4. toggleTheme function return karta hai jisse dark/light switch ho sake
+//   3. toggleTheme function return karta hai jisse dark/light switch ho sake
 //
 // Usage:
 //   const { theme, toggleTheme } = useTheme()
@@ -15,27 +14,14 @@
 import { useCallback, useEffect, useState } from "react"
 import { flushSync } from "react-dom"
 
-// ── Initial theme decide karna ────────────────────────────────────────────────
-// Order: localStorage → OS preference → "dark" as fallback
-function getInitialTheme() {
-  // Pehle localStorage check karo (user ne pehle jo choose kiya tha)
-  const savedTheme = localStorage.getItem("lp_theme") || localStorage.getItem("linkpulse_theme")
-  if (savedTheme === "dark" || savedTheme === "light") return savedTheme
-
-  // Agar localStorage mein nahi hai to OS preference dekho
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"
-}
-
 export function useTheme() {
-  // getInitialTheme function useState ko pass karo (lazy initialization)
+  // Dark mode is the default for every page load.
   // Ye sirf ek baar run hoga — har render pe nahi
-  const [theme, setTheme] = useState(getInitialTheme)
+  const [theme, setTheme] = useState("dark")
 
-  // Theme change hone pe HTML element pe data-theme set karo + localStorage mein save karo
+  // Theme change hone pe HTML element pe data-theme set karo
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
-    localStorage.setItem("lp_theme", theme)
-    localStorage.setItem("linkpulse_theme", theme)  // backward compatibility ke liye
   }, [theme])
 
   // Toggle function — dark → light ya light → dark
