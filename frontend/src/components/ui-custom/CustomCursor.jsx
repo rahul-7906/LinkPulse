@@ -31,7 +31,7 @@ precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uVeloci
 void main(){ float l=texture(uPressure,vUv-vec2(uTexel.x,0)).r,r=texture(uPressure,vUv+vec2(uTexel.x,0)).r; float b=texture(uPressure,vUv-vec2(0,uTexel.y)).r,t=texture(uPressure,vUv+vec2(0,uTexel.y)).r; vec2 v=texture(uVelocity,vUv).xy-0.5*vec2(r-l,t-b); outColor=vec4(v,0,1); }`,
   display: `#version 300 es
 precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uDye;
-void main(){ vec4 d=texture(uDye,vUv); float a=min(d.a*1.5,0.48); vec3 c=vec3(0.34,0.29,0.70)*smoothstep(0.005,0.13,d.a); outColor=vec4(c,a); }`,
+void main(){ vec4 d=texture(uDye,vUv); float a=min(d.a*1.15,0.30); vec3 c=vec3(0.34,0.29,0.70)*smoothstep(0.012,0.17,d.a); outColor=vec4(c,a); }`,
 }
 
 export default function CustomCursor() {
@@ -111,10 +111,18 @@ export default function CustomCursor() {
       })
       gl.drawArrays(gl.TRIANGLES, 0, 3)
     }
+    const clearTargets = (targets) => {
+      gl.clearColor(0, 0, 0, 0)
+      targets.forEach(target => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb)
+        gl.viewport(0, 0, target.size, target.size)
+        gl.clear(gl.COLOR_BUFFER_BIT)
+      })
+    }
     const splat = (x, y, dx, dy, isBurst = false) => {
       const point = [x / width, 1 - y / height], aspect = [width / height, 1]
       const color = [0.34, 0.29, 0.70]
-      const radius = 0.00028
+      const radius = 0.00018
       const outV = 1 - vi
       bind("splat", velocity[outV], { uPoint: point, uAspect: aspect, uForce: [dx / width * 5, -dy / height * 5], uColor: color, uRadius: radius, uBurst: isBurst ? 0.16 : 0, uIsVelocity: 1 }, [["uTarget", velocity[vi].texture]])
       vi = outV
@@ -126,6 +134,7 @@ export default function CustomCursor() {
       if (!running) { running = true; frame = requestAnimationFrame(render) }
     }
     const onMove = (event) => {
+      if (event.pointerType && event.pointerType !== "mouse") return
       const current = { x: event.clientX, y: event.clientY }
       if (previous) pendingMove = { ...current, dx: current.x - previous.x, dy: current.y - previous.y }
       previous = current
@@ -133,6 +142,7 @@ export default function CustomCursor() {
       scheduleRender()
     }
     const onDown = (event) => {
+      if ((event.pointerType && event.pointerType !== "mouse") || !event.isPrimary) return
       burst = { x: event.clientX, y: event.clientY }
       lastInteraction = performance.now()
       scheduleRender()
@@ -153,9 +163,9 @@ export default function CustomCursor() {
         burst = null
       }
       advectPass(velocity[vi], velocity[1 - vi], velocity[vi].texture, 0.985, dt); vi = 1 - vi
-      advectPass(dye[di], dye[1 - di], velocity[vi].texture, 0.94, dt); di = 1 - di
+      advectPass(dye[di], dye[1 - di], velocity[vi].texture, 0.91, dt); di = 1 - di
       bind("curl", curl, { uTexel: [1 / 128, 1 / 128] }, [["uVelocity", velocity[vi].texture]])
-      bind("vorticity", velocity[1 - vi], { uTexel: [1 / 128, 1 / 128], uDt: dt, uStrength: 30 }, [["uVelocity", velocity[vi].texture], ["uCurl", curl.texture]])
+      bind("vorticity", velocity[1 - vi], { uTexel: [1 / 128, 1 / 128], uDt: dt, uStrength: 16 }, [["uVelocity", velocity[vi].texture], ["uCurl", curl.texture]])
       vi = 1 - vi
       bind("divergence", divergence, { uTexel: [1 / 128, 1 / 128] }, [["uVelocity", velocity[vi].texture]])
       gl.bindFramebuffer(gl.FRAMEBUFFER, pressure[0].fb); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); pi = 0
@@ -169,8 +179,14 @@ export default function CustomCursor() {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, canvas.width, canvas.height)
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT)
       bind("display", null, {}, [["uDye", dye[di].texture]])
-      if (performance.now() - lastInteraction < 2400) frame = requestAnimationFrame(render)
-      else { running = false; previous = null; lastTime = 0 }
+      if (performance.now() - lastInteraction < 1400) frame = requestAnimationFrame(render)
+      else {
+        clearTargets([...dye, ...velocity, ...pressure, divergence, curl])
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+        gl.viewport(0, 0, canvas.width, canvas.height)
+        gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT)
+        running = false; previous = null; lastTime = 0
+      }
     }
     const onContextLost = (event) => { event.preventDefault(); running = false; cancelAnimationFrame(frame) }
     const onContextRestored = () => setContextVersion(version => version + 1)
