@@ -9,11 +9,11 @@ void main(){ vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2); vUv=p; gl_Position=v
 
 const shaders = {
   advect: `#version 300 es
-precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uSource,uVelocity; uniform vec2 uTexel; uniform float uDt,uDissipation;
-void main(){ vec2 vel=texture(uVelocity,vUv).xy; vec2 uv=vUv-uDt*vel; outColor=texture(uSource,uv)*uDissipation; }`,
+precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uSource,uVelocity; uniform vec2 uTexel; uniform float uDt,uDissipation,uFlow;
+void main(){ vec2 vel=texture(uVelocity,vUv).xy; vec2 uv=vUv-uDt*vel*uFlow; outColor=texture(uSource,uv)*uDissipation; }`,
   splat: `#version 300 es
 precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uTarget; uniform vec2 uPoint,uAspect,uForce; uniform vec3 uColor; uniform float uRadius,uBurst,uIsVelocity;
-void main(){ vec2 d=(vUv-uPoint)*uAspect; float g=exp(-dot(d,d)/uRadius); vec4 base=texture(uTarget,vUv); vec2 direction=normalize(d+vec2(0.00001)); vec2 kick=mix(uForce,direction*uBurst,uBurst>0.0?1.0:0.0); if(uIsVelocity>0.5) base.xy+=kick*g; else { base.rgb+=uColor*g; base.a=min(1.0,base.a+g*0.8); } outColor=base; }`,
+void main(){ vec2 d=(vUv-uPoint)*uAspect; float g=exp(-dot(d,d)/uRadius); vec4 base=texture(uTarget,vUv); vec2 direction=normalize(d+vec2(0.00001)); vec2 kick=mix(clamp(uForce,vec2(-0.04),vec2(0.04)),direction*uBurst,uBurst>0.0?1.0:0.0); if(uIsVelocity>0.5) base.xy+=kick*g; else { base.rgb=uColor; base.a=max(base.a*0.76,g*0.68); } outColor=base; }`,
   divergence: `#version 300 es
 precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uVelocity; uniform vec2 uTexel;
 void main(){ float l=texture(uVelocity,vUv-vec2(uTexel.x,0)).x,r=texture(uVelocity,vUv+vec2(uTexel.x,0)).x; float b=texture(uVelocity,vUv-vec2(0,uTexel.y)).y,t=texture(uVelocity,vUv+vec2(0,uTexel.y)).y; outColor=vec4(0.5*(r-l+t-b),0,0,1); }`,
@@ -28,10 +28,10 @@ precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uPressu
 void main(){ float l=texture(uPressure,vUv-vec2(uTexel.x,0)).r,r=texture(uPressure,vUv+vec2(uTexel.x,0)).r; float b=texture(uPressure,vUv-vec2(0,uTexel.y)).r,t=texture(uPressure,vUv+vec2(0,uTexel.y)).r; float d=texture(uDivergence,vUv).r; outColor=vec4((l+r+b+t-d)*0.25,0,0,1); }`,
   project: `#version 300 es
 precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uVelocity,uPressure; uniform vec2 uTexel;
-void main(){ float l=texture(uPressure,vUv-vec2(uTexel.x,0)).r,r=texture(uPressure,vUv+vec2(uTexel.x,0)).r; float b=texture(uPressure,vUv-vec2(0,uTexel.y)).r,t=texture(uPressure,vUv+vec2(0,uTexel.y)).r; vec2 v=texture(uVelocity,vUv).xy-0.5*vec2(r-l,t-b); outColor=vec4(v,0,1); }`,
+void main(){ float l=texture(uPressure,vUv-vec2(uTexel.x,0)).r,r=texture(uPressure,vUv+vec2(uTexel.x,0)).r; float b=texture(uPressure,vUv-vec2(0,uTexel.y)).r,t=texture(uPressure,vUv+vec2(0,uTexel.y)).r; vec2 v=texture(uVelocity,vUv).xy-0.5*vec2(r-l,t-b); outColor=vec4(clamp(v,vec2(-0.12),vec2(0.12)),0,1); }`,
   display: `#version 300 es
 precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uDye;
-void main(){ vec4 d=texture(uDye,vUv); float a=min(d.a*1.15,0.30); vec3 c=vec3(0.34,0.29,0.70)*smoothstep(0.012,0.17,d.a); outColor=vec4(c,a); }`,
+void main(){ vec4 d=texture(uDye,vUv); float a=min(d.a*1.42,0.78); vec3 c=vec3(0.44,0.38,0.86)*smoothstep(0.005,0.14,d.a); outColor=vec4(c,a); }`,
 }
 
 export default function CustomCursor() {
@@ -88,7 +88,7 @@ export default function CustomCursor() {
     const dye = [makeTarget(1024, gl.RGBA16F), makeTarget(1024, gl.RGBA16F)]
     let vi = 0, pi = 0, di = 0, width = 1, height = 1, dpr = 1
     let previous = null, pendingMove = null, burst = null, lastTime = 0, frame = 0
-    let running = false, lastInteraction = 0
+    let running = false, lastInteraction = 0, simulationEpoch = 0
 
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 1.5); width = innerWidth; height = innerHeight
@@ -122,16 +122,20 @@ export default function CustomCursor() {
     const splat = (x, y, dx, dy, isBurst = false) => {
       const point = [x / width, 1 - y / height], aspect = [width / height, 1]
       const color = [0.34, 0.29, 0.70]
-      const radius = 0.00018
+      const radius = 0.00015
       const outV = 1 - vi
-      bind("splat", velocity[outV], { uPoint: point, uAspect: aspect, uForce: [dx / width * 5, -dy / height * 5], uColor: color, uRadius: radius, uBurst: isBurst ? 0.16 : 0, uIsVelocity: 1 }, [["uTarget", velocity[vi].texture]])
+      bind("splat", velocity[outV], { uPoint: point, uAspect: aspect, uForce: [dx / width * 1.4, -dy / height * 1.4], uColor: color, uRadius: radius, uBurst: isBurst ? 0.05 : 0, uIsVelocity: 1 }, [["uTarget", velocity[vi].texture]])
       vi = outV
       const outD = 1 - di
-      bind("splat", dye[outD], { uPoint: point, uAspect: aspect, uForce: [0, 0], uColor: color, uRadius: radius * 1.2, uBurst: 0, uIsVelocity: 0 }, [["uTarget", dye[di].texture]])
+      bind("splat", dye[outD], { uPoint: point, uAspect: aspect, uForce: [0, 0], uColor: color, uRadius: radius, uBurst: 0, uIsVelocity: 0 }, [["uTarget", dye[di].texture]])
       di = outD
     }
     const scheduleRender = () => {
-      if (!running) { running = true; frame = requestAnimationFrame(render) }
+      if (!running) {
+        running = true
+        simulationEpoch = performance.now()
+        frame = requestAnimationFrame(render)
+      }
     }
     const onMove = (event) => {
       if (event.pointerType && event.pointerType !== "mouse") return
@@ -148,9 +152,16 @@ export default function CustomCursor() {
       scheduleRender()
     }
     const onUp = () => { previous = null }
-    const advectPass = (source, target, velTexture, dissipation, dt) => bind("advect", target, { uTexel: [1 / source.size, 1 / source.size], uDt: dt, uDissipation: dissipation }, [["uSource", source.texture], ["uVelocity", velTexture]])
+    const advectPass = (source, target, velTexture, dissipation, dt, flow = 1) => bind("advect", target, { uTexel: [1 / source.size, 1 / source.size], uDt: dt, uDissipation: dissipation, uFlow: flow }, [["uSource", source.texture], ["uVelocity", velTexture]])
 
     const render = (time) => {
+      // Hard-bound trail history during long sessions. The overlay is cleared
+      // transparently, then the current pointer splat is drawn into fresh buffers.
+      if (time - simulationEpoch >= 2200) {
+        clearTargets([...dye, ...velocity, ...pressure, divergence, curl])
+        vi = 0; pi = 0; di = 0
+        simulationEpoch = time
+      }
       const dt = Math.min((time - (lastTime || time)) / 1000, 0.025) || 0.016; lastTime = time
       if (pendingMove) {
         const { x, y, dx, dy } = pendingMove
@@ -163,9 +174,9 @@ export default function CustomCursor() {
         burst = null
       }
       advectPass(velocity[vi], velocity[1 - vi], velocity[vi].texture, 0.985, dt); vi = 1 - vi
-      advectPass(dye[di], dye[1 - di], velocity[vi].texture, 0.91, dt); di = 1 - di
+      advectPass(dye[di], dye[1 - di], velocity[vi].texture, 0.89, dt, 0.18); di = 1 - di
       bind("curl", curl, { uTexel: [1 / 128, 1 / 128] }, [["uVelocity", velocity[vi].texture]])
-      bind("vorticity", velocity[1 - vi], { uTexel: [1 / 128, 1 / 128], uDt: dt, uStrength: 16 }, [["uVelocity", velocity[vi].texture], ["uCurl", curl.texture]])
+      bind("vorticity", velocity[1 - vi], { uTexel: [1 / 128, 1 / 128], uDt: dt, uStrength: 5 }, [["uVelocity", velocity[vi].texture], ["uCurl", curl.texture]])
       vi = 1 - vi
       bind("divergence", divergence, { uTexel: [1 / 128, 1 / 128] }, [["uVelocity", velocity[vi].texture]])
       gl.bindFramebuffer(gl.FRAMEBUFFER, pressure[0].fb); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); pi = 0
@@ -185,7 +196,7 @@ export default function CustomCursor() {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null)
         gl.viewport(0, 0, canvas.width, canvas.height)
         gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT)
-        running = false; previous = null; lastTime = 0
+        running = false; previous = null; lastTime = 0; simulationEpoch = 0
       }
     }
     const onContextLost = (event) => { event.preventDefault(); running = false; cancelAnimationFrame(frame) }

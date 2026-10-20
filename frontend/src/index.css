@@ -669,7 +669,7 @@ html[data-theme="light"] main {
   height: 100vh;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 1;
 }
 html[data-theme="light"] .interactive-signal-field {
   mix-blend-mode: normal;
