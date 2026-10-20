@@ -28,11 +28,11 @@ const STEPS = [
 export default function HowItWorksSection() {
   const [activeStep, setActiveStep] = useState(0)
   const [isPlaying, setIsPlaying] = useState(
-    () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    () => !window.matchMedia("(prefers-reduced-motion: reduce), (max-width: 700px), (pointer: coarse)").matches
   )
 
   useEffect(() => {
-    if (!isPlaying) return undefined
+    if (!isPlaying || window.matchMedia("(max-width: 700px), (pointer: coarse)").matches) return undefined
 
     const interval = window.setInterval(() => {
       setActiveStep(current => (current + 1) % STEPS.length)

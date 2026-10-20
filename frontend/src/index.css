@@ -482,6 +482,46 @@ html.theme-transitioning body {
 @keyframes introPulse { 50% { opacity: 0.35; transform: scale(0.65); } }
 @keyframes introProgress { to { width: 100%; } }
 
+/* Minimal typed LinkPulse boot, restored after the GitHub merge. */
+.intro-screen {
+  background: #030405;
+  transition-duration: 760ms;
+}
+.intro-screen--reveal { clip-path: inset(0 0 100% 0); }
+.intro-noise, .intro-grid, .intro-aura,
+.intro-mark, .intro-status, .intro-progress, .intro-corner, .intro-wordmark {
+  display: none !important;
+}
+.intro-content { animation-duration: 520ms; }
+.intro-title {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: #f5f7fb;
+  font-family: 'IBM Plex Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(3rem, 12vw, 9rem);
+  font-weight: 700;
+  letter-spacing: -0.065em;
+  line-height: 1;
+}
+.intro-title-link { color: #f5f7fb; }
+.intro-title-pulse {
+  color: #168cf4;
+  background: linear-gradient(105deg, #168cf4 12%, #35c8ff 88%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.intro-caret {
+  flex: 0 0 clamp(2px, 0.035em, 4px);
+  width: clamp(2px, 0.035em, 4px);
+  height: 0.78em;
+  margin-left: 0.12em;
+  background: #35c8ff;
+  box-shadow: 0 0 20px rgba(53, 200, 255, 0.65);
+  animation: introCaretBlink 820ms steps(2, start) infinite;
+}
+@keyframes introCaretBlink { to { opacity: 0; } }
+
 /* ─── Cursor Experience ───────────────────────────────────────────────────── */
 .custom-cursor-layer {
   position: fixed;
@@ -619,12 +659,21 @@ html[data-theme="light"] main {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.9;
+  opacity: 0.78;
   mix-blend-mode: screen;
 }
+.fluid-cursor-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.9;
+}
 html[data-theme="light"] .interactive-signal-field {
-  mix-blend-mode: multiply;
-  opacity: 0.72;
+  mix-blend-mode: normal;
+  opacity: 0.88;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -906,22 +955,13 @@ html[data-theme="light"] .interactive-signal-field {
   transition: background 0.7s ease;
 }
 html[data-theme="light"] .hero-globe-tint {
-  background:
-    linear-gradient(180deg, rgba(220,246,232,0.10) 0%, rgba(220,246,232,0.18) 42%, rgba(220,246,232,0.44) 100%),
-    linear-gradient(125deg, rgba(16,128,95,0.22), rgba(80,177,151,0.14));
+  background: transparent;
 }
 .hero-light-content-scrim {
   pointer-events: none;
 }
 html[data-theme="light"] .hero-light-content-scrim {
-  background: linear-gradient(
-    90deg,
-    rgba(225,247,235,0.58) 0%,
-    rgba(225,247,235,0.52) 39%,
-    rgba(225,247,235,0.30) 58%,
-    rgba(225,247,235,0.05) 82%,
-    transparent 100%
-  );
+  background: transparent;
 }
 .hero-bottom-overlay {
   pointer-events: none;
@@ -930,22 +970,35 @@ html[data-theme="light"] .hero-light-content-scrim {
 html[data-theme="light"] .hero-bottom-overlay {
   background: linear-gradient(
     to top,
-    rgba(243,255,249,0.68) 0%,
-    rgba(243,255,249,0.54) 24%,
-    rgba(243,255,249,0.24) 55%,
+    rgba(3,4,5,0.92) 0%,
+    rgba(3,4,5,0.72) 42%,
+    rgba(3,4,5,0.24) 76%,
     transparent 100%
   );
 }
 html[data-theme="light"] .floating-pill {
-  color: #174737;
-  background: rgba(224,245,233,0.94);
-  border-color: rgba(16,120,82,0.26);
-  box-shadow: 0 8px 28px rgba(16,70,46,0.10);
+  color: rgba(225,222,245,0.78);
+  background: rgba(17,18,23,0.72);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.22);
 }
 html[data-theme="light"] .hero .cta-ghost {
-  background: rgba(224,245,233,0.78);
-  border-color: rgba(16,120,82,0.24);
-  color: #174737;
+  background: rgba(17,18,23,0.72);
+  border-color: rgba(255,255,255,0.14);
+  color: rgba(238,237,246,0.88);
+}
+html[data-theme="light"] .hero-headline {
+  color: #f4f3f8;
+  text-shadow: 0 2px 24px rgba(0,0,0,0.34);
+}
+html[data-theme="light"] .hero-sub {
+  color: rgba(225,222,245,0.82);
+  text-shadow: 0 1px 14px rgba(0,0,0,0.55);
+}
+html[data-theme="light"] .hero-typed-line,
+html[data-theme="light"] .hero-pillar {
+  color: rgba(225,222,245,0.74);
+  text-shadow: 0 1px 12px rgba(0,0,0,0.5);
 }
 .hero-headline {
   font-size: clamp(3rem, 8vw, 7rem);
@@ -960,6 +1013,10 @@ html[data-theme="light"] .hero .cta-ghost {
 }
 html[data-theme="light"] .gradient-text {
   background: linear-gradient(110deg, #166534 0%, #0f9f72 48%, #0f766e 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+html[data-theme="light"] .hero-headline .gradient-text {
+  background: linear-gradient(110deg, #d1fae5 0%, #34d399 38%, #2dd4bf 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .hero-sub {
@@ -1775,15 +1832,11 @@ html[data-theme="light"] .hero-sub {
 }
 
 html[data-theme="light"] .hero-sub {
-  color: #244b38;
+  color: rgba(225,222,245,0.82);
   font-weight: 400;
 }
-html[data-theme="light"] .hero-typed-line,
-html[data-theme="light"] .hero-pillar {
-  color: #315b47;
-}
 html[data-theme="light"] .hero-typed-line span {
-  color: #087f68;
+  color: #6ee7b7;
 }
 
 /* ── Structural borders on sections ── */
@@ -2120,6 +2173,32 @@ html[data-theme="light"] :focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Phones keep the still hero poster and content without decorative loops. */
+@media (max-width: 700px), (pointer: coarse) {
+  html,
+  html * { cursor: auto !important; }
+  .hero { display: none !important; }
+  #how-it-works .walkthrough-panel { display: none !important; }
+  .fluid-cursor-canvas { display: none; }
+  .orb,
+  .floating-pill,
+  .hero-typed-line i,
+  .faq-marquee-track,
+  .scroll-reveal,
+  .walkthrough-scene,
+  .walkthrough-chart i,
+  .walkthrough-progress span.is-playing {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero-content * { animation: none !important; transition: none !important; }
+  .hero-content [style*="opacity"] {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
   }
 }
 

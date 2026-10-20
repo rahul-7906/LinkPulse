@@ -15,13 +15,24 @@ import { useCallback, useEffect, useState } from "react"
 import { flushSync } from "react-dom"
 
 export function useTheme() {
-  // Dark mode is the default for every page load.
-  // Ye sirf ek baar run hoga — har render pe nahi
-  const [theme, setTheme] = useState("dark")
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem("lp_theme") || localStorage.getItem("linkpulse_theme")
+      return saved === "light" || saved === "dark" ? saved : "dark"
+    } catch {
+      return "dark"
+    }
+  })
 
   // Theme change hone pe HTML element pe data-theme set karo
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
+    try {
+      localStorage.setItem("lp_theme", theme)
+      localStorage.setItem("linkpulse_theme", theme)
+    } catch {
+      // Keep theme switching usable when browser storage is unavailable.
+    }
   }, [theme])
 
   // Toggle function — dark → light ya light → dark

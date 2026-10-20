@@ -1,17 +1,15 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Start in dark mode before CSS/React to prevent a theme flash. -->
-    <script>
-      document.documentElement.setAttribute('data-theme', 'dark');
-    </script>
+    <!-- Restore the saved theme before styles load; new visitors start dark. -->
     <meta charset="UTF-8" />
     <script>
-      const savedTheme = localStorage.getItem("lp_theme") || localStorage.getItem("linkpulse_theme");
-      const initialTheme = savedTheme === "dark" || savedTheme === "light"
-        ? savedTheme
-        : window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-      document.documentElement.dataset.theme = initialTheme;
+      try {
+        const savedTheme = localStorage.getItem("lp_theme") || localStorage.getItem("linkpulse_theme");
+        document.documentElement.dataset.theme = savedTheme === "light" ? "light" : "dark";
+      } catch {
+        document.documentElement.dataset.theme = "dark";
+      }
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.svg" />

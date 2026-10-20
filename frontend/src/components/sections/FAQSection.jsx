@@ -10,51 +10,23 @@ import { ChevronDown } from "lucide-react"
 const FAQS = [
   {
     question: "What is LinkPulse?",
-    answer: "LinkPulse turns long URLs into short links. You can customize a link with an alias, protect it with a password, and track its clicks.",
+    answer: "LinkPulse turns long URLs into short links, with options to customize and protect them and track their clicks.",
   },
   {
-    question: "Is LinkPulse free?",
-    answer: "LinkPulse is currently described as free for personal use, with no sign-up required.",
+    question: "How do I create a short link?",
+    answer: "Paste a URL that starts with http:// or https:// and create your link. Advanced options let you customize it.",
   },
   {
-    question: "What analytics are available?",
-    answer: "LinkPulse records visits, device type, and activity over the last seven days for each link.",
+    question: "Can I customize and protect a link?",
+    answer: "Yes. Choose a custom alias and, if needed, add password protection when creating the link.",
   },
   {
-    question: "Can I password-protect a link?",
-    answer: "Yes. Enable password protection when creating your link and choose a password. Visitors must enter it correctly to continue to the destination.",
+    question: "Can I set an expiry date or click limit?",
+    answer: "Yes. Open Advanced options to choose when a link expires, set a maximum number of clicks, or make it a one-time link.",
   },
   {
-    question: "Can I create a custom alias?",
-    answer: "Yes. Enter an alias when creating your link. If it is already taken, LinkPulse will let you know so you can try another.",
-  },
-  {
-    question: "How do I create my first short link?",
-    answer: "Paste a full URL that starts with http:// or https://, then select Create short link. LinkPulse generates a short address automatically; open Advanced options if you want to customize it.",
-  },
-  {
-    question: "Can I set an expiry date or a click limit?",
-    answer: "Yes. Open Advanced options to choose when a link expires, set a maximum number of clicks, or make it a one-time link. Leave these settings blank if you do not need a limit.",
-  },
-  {
-    question: "What does a one-time link do?",
-    answer: "A one-time link allows one verified click, then blocks future redirects to the destination.",
-  },
-  {
-    question: "Can I pause a link and turn it back on later?",
-    answer: "Yes. In Your links, use the enable or disable action for a link. A disabled link can be enabled again from the same list.",
-  },
-  {
-    question: "Can I download a QR code for my short link?",
-    answer: "Yes. After creating a link, the confirmation window shows its QR code and lets you download it as an image to share or print.",
-  },
-  {
-    question: "Can I change the destination after creating a link?",
-    answer: "The current version does not let you edit a link’s destination. Create a new short link with the updated URL instead.",
-  },
-  {
-    question: "Which destination URLs are supported?",
-    answer: "LinkPulse supports web addresses that use HTTP or HTTPS. Other URL types are not accepted.",
+    question: "What can I see in link analytics?",
+    answer: "LinkPulse shows visits, device type, and activity over the last seven days for each link.",
   },
 ]
 

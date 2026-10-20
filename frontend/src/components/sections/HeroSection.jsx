@@ -29,7 +29,6 @@ const GLOBE_VIDEO_POSTER = "https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKV
 export default function HeroSection({
   heroReady,
   videoReady,
-  theme,
   onScrollDown,
   onViewLinks,
   onScrollFeatures,
@@ -37,6 +36,7 @@ export default function HeroSection({
   const [typedText, setTypedText] = useState("")
   const [phraseIndex, setPhraseIndex] = useState(0)
   const [isDeleting, setIsDeleting] = useState(false)
+  const disableMobileMotion = typeof window !== "undefined" && window.matchMedia("(max-width: 700px), (pointer: coarse)").matches
   // heroRef = poora hero section element (parallax calculation ke liye)
   // heroBackgroundRef = globe video layer jo mouse se parallax hoti hai
   // heroParallaxFrame = animation frame ID (cleanup ke liye)
@@ -75,6 +75,7 @@ export default function HeroSection({
 
   // ── Mouse bahar jaane pe glass layer reset karo ────────────────────────────
   const resetHeroParallax = () => {
+    if (window.matchMedia("(max-width: 700px), (pointer: coarse)").matches) return
     cancelAnimationFrame(heroParallaxFrame.current)
     heroParallaxFrame.current = requestAnimationFrame(() => {
       heroBackgroundRef.current?.style.setProperty("--parallax-x", "0px")
@@ -87,6 +88,15 @@ export default function HeroSection({
 
   useEffect(() => {
     const videos = globeVideoRefs.current
+    if (window.matchMedia("(max-width: 700px), (pointer: coarse)").matches) {
+      videos.forEach(video => {
+        if (!video) return
+        video.pause()
+        video.removeAttribute("src")
+        video.load()
+      })
+      return undefined
+    }
     const crossfadeSeconds = 0.9
 
     const swapVideo = async () => {
@@ -132,6 +142,7 @@ export default function HeroSection({
 
   useEffect(() => {
     const phrase = TYPED_PHRASES[phraseIndex]
+    if (disableMobileMotion) return undefined
     const completed = typedText === phrase
     const empty = typedText.length === 0
     const delay = completed ? 1500 : empty && isDeleting ? 350 : isDeleting ? 42 : 78
@@ -145,7 +156,7 @@ export default function HeroSection({
       }
     }, delay)
     return () => window.clearTimeout(timer)
-  }, [isDeleting, phraseIndex, typedText])
+  }, [disableMobileMotion, isDeleting, phraseIndex, typedText])
 
   return (
     <section
@@ -165,7 +176,7 @@ export default function HeroSection({
           <video
             key={index}
             ref={element => { globeVideoRefs.current[index] = element }}
-            autoPlay={index === 0}
+            autoPlay={index === 0 && !disableMobileMotion}
             muted
             loop
             playsInline
@@ -173,13 +184,13 @@ export default function HeroSection({
             disablePictureInPicture
             poster={GLOBE_VIDEO_POSTER}
             className={`hero-globe-video absolute inset-0 h-full w-full object-cover${activeGlobeVideo === index ? " is-active" : ""}`}
-            src={GLOBE_VIDEO_URL}
+            src={disableMobileMotion ? undefined : GLOBE_VIDEO_URL}
             style={{
-              transform: videoReady ? "scale(1.05)" : "scale(0.85)",
-              filter: theme === "dark"
-                ? "brightness(0.56) saturate(1.12) contrast(1.08)"
-                : "brightness(0.60) saturate(0.76) contrast(0.98)",
-              transition: "opacity 0.9s linear, transform 2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease",
+              transform: disableMobileMotion ? "scale(1)" : videoReady ? "scale(1.05)" : "scale(0.85)",
+              // Keep the globe animation crisp and consistently saturated in
+              // both themes; theme-specific overlays handle text readability.
+              filter: "brightness(0.56) saturate(1.12) contrast(1.08)",
+              transition: disableMobileMotion ? "none" : "opacity 0.9s linear, transform 2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease",
             }}
           />
         ))}
@@ -230,7 +241,7 @@ export default function HeroSection({
             <span className="gradient-text">Think For You.</span>
           </h1>
           <div className="hero-typed-line" aria-live="polite">
-            Build <span>{typedText}</span><i aria-hidden="true" />
+            Build <span>{disableMobileMotion ? TYPED_PHRASES[0] : typedText}</span><i aria-hidden="true" />
           </div>
 
           {/* Subtitle / description */}
