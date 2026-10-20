@@ -39,12 +39,13 @@
 //  │       └── RedirectLoader.jsx     — redirect hone ka loading screen
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { IntroAnimation } from "./components/intro-animation"
+import { HERO_REVEAL_MS, IntroAnimation } from "./components/intro-animation"
 import { MobileNav } from "./components/mobile-nav"
 
 // ── Custom Hooks ──────────────────────────────────────────────────────────────
 import { useTheme } from "./hooks/useTheme"
 import { useLinkManager } from "./hooks/useLinkManager"
+import { isSupabaseConfigured } from "./supabase"
 
 // ── Utility Components ────────────────────────────────────────────────────────
 import AnimatedBackground from "./components/ui-custom/AnimatedBackground"
@@ -61,7 +62,51 @@ import Footer from "./components/sections/Footer"
 import CreatedModal from "./components/sections/CreatedModal"
 import RedirectLoader from "./components/sections/RedirectLoader"
 
-export default function LinkPulsePage() {
+function SupabaseSetupNotice() {
+  return (
+    <main
+      className="flex min-h-screen items-center justify-center px-5 py-12 font-sans antialiased"
+      style={{ background: "var(--page-bg)", color: "var(--text-primary)" }}
+    >
+      <section
+        className="w-full max-w-2xl rounded-3xl p-7 sm:p-10"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        <p className="mb-3 text-xs uppercase tracking-[0.25em]" style={{ color: "var(--accent-cyan)" }}>
+          LinkPulse setup
+        </p>
+        <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+          Connect your Supabase project
+        </h1>
+        <p className="mt-4 leading-7" style={{ color: "var(--text-secondary)" }}>
+          The page could not load because its Supabase connection is not configured.
+          Add your project URL and anon/public key to start using LinkPulse.
+        </p>
+        <ol className="mt-7 list-decimal space-y-3 pl-5 leading-6" style={{ color: "var(--text-secondary)" }}>
+          <li>Copy <code>frontend/.env.example</code> to <code>frontend/.env.local</code>.</li>
+          <li>
+            Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>
+            {" "}from your Supabase project settings.
+          </li>
+          <li>Restart the dev server and refresh this page.</li>
+        </ol>
+        <p
+          className="mt-7 rounded-xl px-4 py-3 text-sm leading-6"
+          style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}
+        >
+          Use only the anon/public key in frontend settings. Never use a service-role key here.
+        </p>
+      </section>
+    </main>
+  )
+}
+
+export default function App() {
+  if (!isSupabaseConfigured) return <SupabaseSetupNotice />
+  return <LinkPulsePage />
+}
+
+function LinkPulsePage() {
   // ── Theme hook — dark/light mode manage karta hai ────────────────────────
   const { theme, toggleTheme } = useTheme()
 
@@ -104,9 +149,11 @@ export default function LinkPulsePage() {
   // heroReady = intro animation khatam hua? (tab hero text dikhao)
   const [heroReady, setHeroReady] = useState(false)
   const [videoReady, setVideoReady] = useState(false)
-  const handleIntroDone = useCallback(() => {
-    setHeroReady(true)
-    setVideoReady(true)
+  const handleIntroDone = useCallback(() => setHeroReady(true), [])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVideoReady(true), HERO_REVEAL_MS)
+    return () => window.clearTimeout(timer)
   }, [])
 
   // Background video intro ke reveal ke saath zoom-in hota hai.

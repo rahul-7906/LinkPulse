@@ -8,7 +8,7 @@
 // 4. ONE-TIME LINK – Blocks future redirects after one verified click
 
 import { createPortal } from "react-dom"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import {
   ArrowUpRight, BarChart2, Calendar, Check, Copy, Flame,
   Eye, EyeOff, Hash, KeyRound, Link2, LockKeyhole,
@@ -59,8 +59,8 @@ export default function ShortenerSection({
           <div className="section-badge mx-auto mb-4">
             <Link2 className="size-3.5 text-violet-400" /> CREATE
           </div>
-          <h2 className="section-title">Shorten a link</h2>
-          <p className="section-sub mx-auto">Paste a long URL to get started. Add an alias or security settings only if you need them.</p>
+          <h2 className="section-title">Create your secure LinkPulse URL.</h2>
+          <p className="section-sub mx-auto">Paste, customize, and launch your link in under 3 seconds.</p>
           <button type="button" onClick={onViewLinks} className="mt-5 inline-flex items-center gap-2 text-xs text-violet-400 transition hover:text-violet-300">
             View your shortened links <ArrowUpRight className="size-3.5" />
           </button>
@@ -228,6 +228,7 @@ export default function ShortenerSection({
           </GlassCard>
         </div>
 
+        <CompactAnalytics analyticsRef={analyticsRef} />
 
         {/* ── Links Table ─────────────────────────────────────────────────── */}
         <div ref={tableRef} id="your-links" className="scroll-mt-24">
@@ -241,7 +242,6 @@ export default function ShortenerSection({
             onCreateLink={onCreateLink}
           />
         </div>
-        <CompactAnalytics analyticsRef={analyticsRef} />
       </div>
     </section>
   )
@@ -280,7 +280,7 @@ function ShortenerForm({ longUrl, setLongUrl, alias, setAlias, aliasError, setAl
           value={longUrl}
           onChange={e => setLongUrl(e.target.value)}
           id="long-url"
-          placeholder="Paste your long URL here (https://…)"
+          placeholder="https://your-very-long-link.com/path?with=params"
           className="form-input"
           aria-describedby="destination-help"
         />
@@ -319,8 +319,8 @@ function ShortenerForm({ longUrl, setLongUrl, alias, setAlias, aliasError, setAl
       {/* Generate button */}
       <button type="submit" disabled={generating} className="cta-generate">
         {generating
-          ? <><span className="generate-spinner" /> Creating link...</>
-          : <>Create short link <ArrowUpRight className="size-4" /></>}
+          ? <><span className="generate-spinner" /> Generating...</>
+          : <>Generate <ArrowUpRight className="size-4" /></>}
       </button>
     </div>
   )
@@ -344,20 +344,45 @@ function StatsCard({ icon, iconBg, value, label, sub }) {
 function AnalyticsPopover({ linkId, shortCode, anchorEl, onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const [loadError, setLoadError] = useState("")
+  const [pos, setPos] = useState(null)
   const popRef = useRef(null)
 
-  // Compute position from anchor button
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!anchorEl) return
-    const rect = anchorEl.getBoundingClientRect()
-    const popWidth = 288 // w-72
-    // Try to place below-right; clamp to viewport
-    let left = rect.right - popWidth
-    if (left < 8) left = 8
-    if (left + popWidth > window.innerWidth - 8) left = window.innerWidth - popWidth - 8
-    const frame = requestAnimationFrame(() => setPos({ top: rect.bottom + 8, left }))
-    return () => cancelAnimationFrame(frame)
+
+    const updatePosition = () => {
+      if (!popRef.current) return
+      const anchor = anchorEl.getBoundingClientRect()
+      const popover = popRef.current.getBoundingClientRect()
+      const margin = 12
+      const gap = 8
+      const maxLeft = Math.max(margin, window.innerWidth - popover.width - margin)
+      const left = Math.max(margin, Math.min(anchor.right - popover.width, maxLeft))
+      const spaceBelow = window.innerHeight - anchor.bottom - margin
+      const spaceAbove = anchor.top - margin
+      const top = spaceBelow >= popover.height + gap
+        ? anchor.bottom + gap
+        : spaceAbove >= popover.height + gap
+          ? anchor.top - popover.height - gap
+          : Math.max(margin, Math.min(anchor.bottom + gap, window.innerHeight - popover.height - margin))
+
+      setPos(current => current?.top === top && current?.left === left ? current : { top, left })
+    }
+
+    updatePosition()
+    window.addEventListener("resize", updatePosition)
+    window.addEventListener("scroll", updatePosition, true)
+    const observer = typeof ResizeObserver !== "undefined" && popRef.current
+      ? new ResizeObserver(updatePosition)
+      : null
+    if (observer && popRef.current) observer.observe(popRef.current)
+
+    return () => {
+      window.removeEventListener("resize", updatePosition)
+      window.removeEventListener("scroll", updatePosition, true)
+      observer?.disconnect()
+    }
   }, [anchorEl])
 
   // Fetch click data and keep an open popover current.
@@ -370,7 +395,15 @@ function AnalyticsPopover({ linkId, shortCode, anchorEl, onClose }) {
         .order("created_at", { ascending: false })
         .limit(200)
 
-      if (!error && rows) {
+      if (error) {
+        console.error("Analytics click data error:", error)
+        setLoadError("Analytics could not be loaded. Please try again.")
+        setLoading(false)
+        return
+      }
+
+      if (rows) {
+        setLoadError("")
         const mobile = rows.filter(r => r.device_type === "mobile").length
         const desktop = rows.filter(r => r.device_type === "desktop").length
         const ghost = rows.filter(r => r.is_ghost).length
@@ -424,8 +457,8 @@ function AnalyticsPopover({ linkId, shortCode, anchorEl, onClose }) {
       ref={popRef}
       style={{
         position: "fixed",
-        top: pos.top,
-        left: pos.left,
+        top: pos?.top ?? -9999,
+        left: pos?.left ?? -9999,
         width: 288,
         zIndex: 9999,
         background: "var(--modal-bg)",
@@ -453,6 +486,10 @@ function AnalyticsPopover({ linkId, shortCode, anchorEl, onClose }) {
           <span className="size-4 rounded-full border-2 border-violet-500/40 border-t-violet-500 animate-spin" />
           <span className="text-xs">Loading...</span>
         </div>
+      ) : loadError ? (
+        <p role="alert" className="text-center py-4 text-xs text-rose-400">
+          {loadError}
+        </p>
       ) : !data || data.total === 0 ? (
         <p className="text-center py-4 text-xs" style={{ color: "var(--text-faint)" }}>
           No clicks recorded yet.

@@ -19,10 +19,12 @@
 //   onScrollFeatures — features section pe scroll karne ke liye function
 
 import { useEffect, useRef, useState } from "react"
-import { Activity, ArrowDown, ArrowUpRight, CheckCircle2, ChevronRight, Filter, Sparkles } from "lucide-react"
+import { ArrowDown, ArrowUpRight, ChevronRight, Sparkles } from "lucide-react"
 import FloatingPill from "../ui-custom/FloatingPill"
 
 const TYPED_PHRASES = ["secure links.", "clean analytics.", "better campaigns."]
+const GLOBE_VIDEO_URL = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260912_104036_bd6924f6-3c8e-417e-8465-6d03c8c2e9e6.mp4"
+const GLOBE_VIDEO_POSTER = "https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/82e7eb75-c65f-490a-99b5-f3d1cad54200.webp"
 
 export default function HeroSection({
   heroReady,
@@ -35,13 +37,16 @@ export default function HeroSection({
   const [typedText, setTypedText] = useState("")
   const [phraseIndex, setPhraseIndex] = useState(0)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isPhone, setIsPhone] = useState(() => window.matchMedia("(max-width: 700px)").matches)
   // heroRef = poora hero section element (parallax calculation ke liye)
-  // heroGlassRef = glass layer jo mouse se tilt hoti hai
+  // heroBackgroundRef = globe video layer jo mouse se parallax hoti hai
   // heroParallaxFrame = animation frame ID (cleanup ke liye)
   const heroRef = useRef(null)
-  const heroGlassRef = useRef(null)
-  const heroSignalRef = useRef(null)
+  const heroBackgroundRef = useRef(null)
+  const globeVideoRefs = useRef([])
+  const activeGlobeVideoRef = useRef(0)
+  const globeSwapRef = useRef(false)
+  const globeSwapTimerRef = useRef(null)
+  const [activeGlobeVideo, setActiveGlobeVideo] = useState(0)
   const heroParallaxFrame = useRef(null)
 
   // ── Mouse parallax effect — hero glass layer mouse pe react kare ───────────
@@ -63,10 +68,8 @@ export default function HeroSection({
     cancelAnimationFrame(heroParallaxFrame.current)
     heroParallaxFrame.current = requestAnimationFrame(() => {
       // CSS custom properties set karo — ye CSS mein use hoti hain
-      heroSignalRef.current?.style.setProperty("--parallax-x", `${x}px`)
-      heroSignalRef.current?.style.setProperty("--parallax-y", `${y}px`)
-      heroGlassRef.current?.style.setProperty("--parallax-x", `${x}px`)
-      heroGlassRef.current?.style.setProperty("--parallax-y", `${y}px`)
+      heroBackgroundRef.current?.style.setProperty("--parallax-x", `${x}px`)
+      heroBackgroundRef.current?.style.setProperty("--parallax-y", `${y}px`)
     })
   }
 
@@ -74,10 +77,8 @@ export default function HeroSection({
   const resetHeroParallax = () => {
     cancelAnimationFrame(heroParallaxFrame.current)
     heroParallaxFrame.current = requestAnimationFrame(() => {
-      heroSignalRef.current?.style.setProperty("--parallax-x", "0px")
-      heroSignalRef.current?.style.setProperty("--parallax-y", "0px")
-      heroGlassRef.current?.style.setProperty("--parallax-x", "0px")
-      heroGlassRef.current?.style.setProperty("--parallax-y", "0px")
+      heroBackgroundRef.current?.style.setProperty("--parallax-x", "0px")
+      heroBackgroundRef.current?.style.setProperty("--parallax-y", "0px")
     })
   }
 
@@ -85,10 +86,48 @@ export default function HeroSection({
   useEffect(() => () => cancelAnimationFrame(heroParallaxFrame.current), [])
 
   useEffect(() => {
-    const phoneQuery = window.matchMedia("(max-width: 700px)")
-    const updatePhoneLayout = event => setIsPhone(event.matches)
-    phoneQuery.addEventListener("change", updatePhoneLayout)
-    return () => phoneQuery.removeEventListener("change", updatePhoneLayout)
+    const videos = globeVideoRefs.current
+    const crossfadeSeconds = 0.9
+
+    const swapVideo = async () => {
+      if (globeSwapRef.current) return
+      const currentIndex = activeGlobeVideoRef.current
+      const currentVideo = videos[currentIndex]
+      const nextIndex = 1 - currentIndex
+      const nextVideo = videos[nextIndex]
+
+      if (
+        !currentVideo ||
+        !nextVideo ||
+        !Number.isFinite(currentVideo.duration) ||
+        currentVideo.duration - currentVideo.currentTime > crossfadeSeconds ||
+        nextVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+      ) return
+
+      globeSwapRef.current = true
+      nextVideo.currentTime = 0
+
+      try {
+        await nextVideo.play()
+      } catch {
+        globeSwapRef.current = false
+        return
+      }
+
+      activeGlobeVideoRef.current = nextIndex
+      setActiveGlobeVideo(nextIndex)
+      globeSwapTimerRef.current = window.setTimeout(() => {
+        currentVideo.pause()
+        currentVideo.currentTime = 0
+        globeSwapRef.current = false
+      }, crossfadeSeconds * 1000 + 100)
+    }
+
+    videos.forEach(video => video?.addEventListener("timeupdate", swapVideo))
+    return () => {
+      videos.forEach(video => video?.removeEventListener("timeupdate", swapVideo))
+      if (globeSwapTimerRef.current !== null) window.clearTimeout(globeSwapTimerRef.current)
+    }
   }, [])
 
   useEffect(() => {
@@ -115,31 +154,38 @@ export default function HeroSection({
       onPointerLeave={resetHeroParallax}
       onPointerMove={handleHeroPointerMove}
     >
-      {/* Background video layer — mouse se thoda move hoti hai */}
-      {!isPhone && (
-        <div
-          ref={heroGlassRef}
-          className="hero-glass-layer absolute inset-[-5%] z-0"
-          aria-hidden="true"
-          style={{ transform: "translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0)" }}
-        >
+      {/* Looping globe video — theme overlay keeps the scene aligned with the UI. */}
+      <div
+        ref={heroBackgroundRef}
+        className="hero-globe-layer absolute inset-[-5%] z-0"
+        aria-hidden="true"
+        style={{ transform: "translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0)" }}
+      >
+        {[0, 1].map(index => (
           <video
-            autoPlay
-            loop
+            key={index}
+            ref={element => { globeVideoRefs.current[index] = element }}
+            autoPlay={index === 0}
             muted
+            loop
             playsInline
-            className="hero-glass-video absolute inset-0 h-full w-full object-cover"
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/agentic-hero-9yW3wnTNMfn2U6lsVhTTZSJFEvAoSj.mp4"
+            preload="auto"
+            disablePictureInPicture
+            poster={GLOBE_VIDEO_POSTER}
+            className={`hero-globe-video absolute inset-0 h-full w-full object-cover${activeGlobeVideo === index ? " is-active" : ""}`}
+            src={GLOBE_VIDEO_URL}
             style={{
               transform: videoReady ? "scale(1.05)" : "scale(0.85)",
               filter: theme === "dark"
-                ? "brightness(0.52) saturate(1.25) contrast(1.08)"
-                : "brightness(1.08) saturate(0.68) contrast(0.92)",
-              transition: "transform 2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease",
+                ? "brightness(0.56) saturate(1.12) contrast(1.08)"
+                : "brightness(0.60) saturate(0.76) contrast(0.98)",
+              transition: "opacity 0.9s linear, transform 2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease",
             }}
           />
-        </div>
-      )}
+        ))}
+      </div>
+      <div className="hero-globe-tint absolute inset-0 z-[1]" aria-hidden="true" />
+      <div className="hero-light-content-scrim absolute inset-0 z-[1]" aria-hidden="true" />
 
       {/* ── Bottom gradient overlay — text ko background se separate karta hai */}
       <div
@@ -152,35 +198,6 @@ export default function HeroSection({
       <FloatingPill text="go.lp/product-hunt"  delay={1.2} x={78} y={38} className="floating-pill-hide-tablet" />
       <FloatingPill text="go.lp/investor-deck" delay={2.4} x={72} y={58} />
       <FloatingPill text="go.lp/waitlist"      delay={0.8} x={82} y={76} className="floating-pill-hide-tablet" />
-
-      <div
-        ref={heroSignalRef}
-        className="hero-signal-preview"
-        style={{
-          opacity: heroReady ? 1 : 0,
-          transform: heroReady
-            ? "translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0) rotate(1deg)"
-            : "translate3d(var(--parallax-x, 0px), calc(18px + var(--parallax-y, 0px)), 0) rotate(1deg)",
-        }}
-      >
-        <div className="hero-signal-header">
-          <span className="hero-signal-live"><span /> YOUR LINKPULSE URL</span>
-          <Activity className="size-4" />
-        </div>
-        <div className="hero-signal-url">linkpulse.to/launch</div>
-        <div className="hero-signal-qr" aria-hidden="true">
-          {Array.from({ length: 25 }, (_, index) => <span key={index} className={(index % 5 === 0 || index === 6 || index === 18 || index === 22) ? "is-dark" : ""} />)}
-        </div>
-        <div className="hero-signal-rule" />
-        <div className="hero-signal-metrics">
-          <div><strong>1,284</strong><span>verified visits</span></div>
-          <div><strong>92%</strong><span>traffic quality</span></div>
-        </div>
-        <div className="hero-signal-status">
-          <span><CheckCircle2 className="size-3.5" /> Protected link</span>
-          <span><Filter className="size-3.5" /> 43 bots filtered</span>
-        </div>
-      </div>
 
       {/* ── Main hero content — headline, subtext, buttons ───────────────── */}
       <div className="hero-content relative z-[2] w-full px-6 pb-16 md:px-14 lg:px-20">

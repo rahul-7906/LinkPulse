@@ -3,10 +3,19 @@ import { Activity, Monitor, RefreshCw, Smartphone } from "lucide-react"
 import { supabase } from "../../supabase"
 
 function getVisitorId() {
-  let id = localStorage.getItem("linkpulse_visitor_id")
+  let id = null
+  try {
+    id = localStorage.getItem("linkpulse_visitor_id")
+  } catch (error) {
+    console.warn("Visitor ID storage is unavailable:", error.message)
+  }
   if (!id) {
     id = "usr_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36)
-    localStorage.setItem("linkpulse_visitor_id", id)
+    try {
+      localStorage.setItem("linkpulse_visitor_id", id)
+    } catch (error) {
+      console.warn("Visitor ID could not be saved:", error.message)
+    }
   }
   return id
 }

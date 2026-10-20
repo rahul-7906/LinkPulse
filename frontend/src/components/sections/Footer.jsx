@@ -42,28 +42,24 @@ export default function Footer({ theme }) {
             </p>
           </div>
 
-          <div className="footer-connect">
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>Connect with me</p>
-            <div className="footer-socials">
-              <a href="https://www.linkedin.com/in/rahulmelkani/" target="_blank" rel="noreferrer" aria-label="Rahul on LinkedIn" className="footer-social-link">
-                <SocialMark type="linkedin" />
-                <span>LinkedIn</span>
-              </a>
-              <a href="https://github.com/rahul-7906" target="_blank" rel="noreferrer" aria-label="Rahul on GitHub" className="footer-social-link">
-                <SocialMark type="github" />
-                <span>GitHub</span>
-              </a>
-              <a href="mailto:rahulmelkani4280@gmail.com" aria-label="Email Rahul" className="footer-social-link">
-                <Mail className="size-4" aria-hidden="true" />
-                <span>Email</span>
-              </a>
-            </div>
-            <p className="text-[11px]" style={{ color: "var(--text-faint)" }}>
-              © {new Date().getFullYear()} LinkPulse
-            </p>
-          </div>
-
           <p className="text-xs md:text-right" style={{ color: "var(--text-muted)" }}>Built by <strong style={{ color: "var(--text-primary)" }}>Team Tech Titans</strong></p>
+        </div>
+        <div className="footer-connect">
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Connect with me</p>
+          <div className="footer-socials">
+            <a href="https://www.linkedin.com/in/rahulmelkani/" target="_blank" rel="noreferrer" aria-label="Rahul on LinkedIn" className="footer-social-link">
+              <SocialMark type="linkedin" />
+            </a>
+            <a href="https://github.com/rahul-7906" target="_blank" rel="noreferrer" aria-label="Rahul on GitHub" className="footer-social-link">
+              <SocialMark type="github" />
+            </a>
+            <a href="mailto:rahulmelkani4280@gmail.com" aria-label="Email Rahul" className="footer-social-link">
+              <Mail className="size-4" />
+            </a>
+          </div>
+          <p className="text-[11px]" style={{ color: "var(--text-faint)" }}>
+            © {new Date().getFullYear()} LinkPulse
+          </p>
         </div>
       </div>
     </footer>

@@ -93,6 +93,7 @@ export function useLinkManager() {
 
   // tableRef = links table DOM reference (modal "view in table" button ke liye)
   const tableRef = useRef(null)
+  const processedRedirectSlugRef = useRef(null)
 
   // ── Visitor ID ────────────────────────────────────────────────────────────
   // localStorage mein store hone wala unique browser ID.
@@ -102,11 +103,20 @@ export function useLinkManager() {
   // isliye ye logic ref mein move kiya.
   const visitorIdRef = useRef(null)
   if (visitorIdRef.current === null) {
-    let id = localStorage.getItem("linkpulse_visitor_id")
+    let id = null
+    try {
+      id = localStorage.getItem("linkpulse_visitor_id")
+    } catch (error) {
+      console.warn("Visitor ID storage is unavailable:", error.message)
+    }
     if (!id) {
       // eslint-disable-next-line react-hooks/purity
       id = "usr_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36)
-      localStorage.setItem("linkpulse_visitor_id", id)
+      try {
+        localStorage.setItem("linkpulse_visitor_id", id)
+      } catch (error) {
+        console.warn("Visitor ID could not be saved:", error.message)
+      }
     }
     visitorIdRef.current = id
   }
@@ -130,8 +140,9 @@ export function useLinkManager() {
   useEffect(() => {
     const slug = window.location.pathname.replace(/^\/+/, "").trim()
     if (!slug || slug === "analytics") return
+    if (processedRedirectSlugRef.current === slug) return
+    processedRedirectSlugRef.current = slug
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRedirecting(true)
 
     async function processRedirect() {
@@ -143,6 +154,12 @@ export function useLinkManager() {
         .single()
 
       if (error || !data) {
+        if (error && error.code !== "PGRST116") {
+          console.error("Link lookup error:", error)
+          setRedirectError("We could not open this link right now. Please try again.")
+          setRedirecting(false)
+          return
+        }
         setRedirectError("This link could not be found or has expired.")
         setRedirecting(false)
         return
@@ -209,7 +226,12 @@ export function useLinkManager() {
       const deviceType = /Mobi|Android|iPhone|iPad/i.test(ua) ? "mobile" : "desktop"
       const visitorClassification = classifyVisitor(ua, document.referrer)
       const ghostKey = `linkpulse_last_click_${data.id}`
-      const previousClick = Number(localStorage.getItem(ghostKey) || 0)
+      let previousClick = 0
+      try {
+        previousClick = Number(localStorage.getItem(ghostKey) || 0)
+      } catch (error) {
+        console.warn("Repeat-visit storage is unavailable:", error.message)
+      }
       const clickTime = Date.now()
       const isGhost = clickTime - previousClick < 1500
       const geometrySignal = window.outerWidth === 0 || window.outerHeight === 0 || window.innerWidth === 0
@@ -231,7 +253,11 @@ export function useLinkManager() {
         p_traffic_class: visitorClassification.trafficClass,
         p_validation_reasons: visitorClassification.validationReasons,
       })
-      localStorage.setItem(ghostKey, String(clickTime))
+      try {
+        localStorage.setItem(ghostKey, String(clickTime))
+      } catch (error) {
+        console.warn("Repeat-visit timestamp could not be saved:", error.message)
+      }
 
       // clicks_count bhi update karo (denormalized counter — fast reads ke liye)
       if (clickError) {
